@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Scanner;
 
+import eamocanu.utils.GraphReader;
+
 
 /**
  * @author Adrian
@@ -36,24 +38,30 @@ public class Model {
 	private Node startNode, endNode;
 	
 	//collect some stats 
-	private static int maxNodes; //max # traversable nodes
-	private static int numSols=0; //number of solutions found
-	private static int branches=0; //recursion branches
+	private int totalNodes; //max # traversable nodes
+	private int numSols=0; //number of solutions found
+	private int branches=0; //recursion branches
+	
+	private GraphReader graphReader;
 	
 	
-	
-	/** Clearly I'm in a rush reading a file in the ctor */
-	public Model() {
-		super();
-		try {
-			readInGraph();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+	public Model(GraphReader graphReader) {
+		this.graphReader= graphReader;
+		init();
 	}
 	
 	
+	private void init() {
+		graph = graphReader.readInGraph();
+		iSize=graphReader.getGraphRows();
+		jSize=graphReader.getGraphColumns();
+		startNode=graphReader.getStartNode();
+		endNode=graphReader.getEndNode();
+		totalNodes=graphReader.getTotalNodes();
+	}
+
+
 	/** Calculates number of paths and prints results */
 	public void findNumberOfPaths() {
 		findNumPaths(startNode, 1, null);
@@ -76,7 +84,7 @@ public class Model {
 	private void findNumPaths(Node crtNode, int crtDepth, Node prevBridgeCell){
 		if (crtNode==null) return; //reached end or node we don't own
 		if (crtNode.isVisited()) return; //been here already
-		if (crtNode == endNode  &&  maxNodes != crtDepth) return; //reached end too early
+		if (crtNode == endNode  &&  totalNodes != crtDepth) return; //reached end too early
 		
 		//look for bridges
 		if (prevBridgeCell !=null){
@@ -102,7 +110,7 @@ public class Model {
 		branches++;
 		
 		//found path -> record it
-		if ( crtNode == endNode  &&  maxNodes == crtDepth ){
+		if ( crtNode == endNode  &&  totalNodes == crtDepth ){
 			numSols++;
 			//for illustration purposes you can see solutions found by
 			//uncommenting these lines
@@ -324,7 +332,7 @@ public class Model {
 	private boolean isDisconnected(Node[][] graph, int pathLength) {
 		resetInQueuePointers(graph);
 		int numNodesInGraph= findReachableNodesFromEnd();
-		return (numNodesInGraph < maxNodes-pathLength);
+		return (numNodesInGraph < totalNodes-pathLength);
 	}
 	
 	
@@ -453,53 +461,7 @@ public class Model {
 	}
 
 
-	/** Read in the graph from stdin into a Node 2D matrix 
-	 * 
-	 * TODO: This should clearly be part of a reader class */
-	public void readInGraph() throws IOException{
-        Scanner sc = new Scanner( System.in );
-		
-        jSize= sc.nextInt();
-		iSize= sc.nextInt();
-		graph = new Node[iSize][jSize];
-		
-		//read graph
-		for (int i=0; i<iSize;i++){
-			for (int j=0; j<jSize;j++){
-				graph[i][j]=new Node(Integer.parseInt(sc.next()), i, j);
-				if (graph[i][j].nodeData == Commons.START_NODE ){
-					startNode=graph[i][j]; 
-				}
-				if (graph[i][j].nodeData == Commons.END_NODE ){
-					endNode=graph[i][j]; 
-				}
-				
-				//keep track of how many nodes we need to go through
-				if ( !(graph[i][j].nodeData == Commons.BLOCKED_NODE) ){
-					maxNodes++;
-				}
-			}
-		}
-		
-		//set neighbours
-		for (int i=0; i<iSize; i++){
-			for (int j=0; j<jSize; j++){
-				if (j!=0 && !(graph[i][j-1].nodeData == Commons.BLOCKED_NODE)){
-					graph[i][j].neighbours.add(graph[i][j-1]);
-				}
-				if (j!=jSize-1 && !(graph[i][j+1].nodeData == Commons.BLOCKED_NODE)){
-					graph[i][j].neighbours.add(graph[i][j+1]);
-				}
-				if (i!=0 && !(graph[i-1][j].nodeData == Commons.BLOCKED_NODE)){
-					graph[i][j].neighbours.add(graph[i-1][j]);
-				}
-				if (i!=iSize-1 && !(graph[i+1][j].nodeData == Commons.BLOCKED_NODE)){
-					graph[i][j].neighbours.add(graph[i+1][j]);
-				}
-			}
-		}
-		
-	}
+
 	
 	//for fun and debugging
 	private void printSolution(boolean colour){
